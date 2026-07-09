@@ -8,16 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  hacs:
-    name: HACS validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: HACS Action
-        uses: hacs/action@main
-        with:
-          category: appdaemon
-
   tests:
     name: Python tests
     runs-on: ubuntu-latest
@@ -35,3 +25,15 @@ jobs:
         run: python -m compileall -q apps
       - name: Unit tests
         run: pytest
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    # Only validate the HACS packaging once the tests have passed.
+    needs: tests
+    steps:
+      - uses: actions/checkout@v7
+      - name: HACS Action
+        uses: hacs/action@main
+        with:
+          category: appdaemon
