@@ -2,10 +2,14 @@ name: Validate
 
 on:
   push:
+    paths-ignore: ['**.md', '.vscode/**']
+    branches:
+      - main
   pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore: ['**.md', '.vscode/**']
   schedule:
     - cron: "0 4 * * 1"  # contrôle hebdomadaire (lundi 04:00 UTC)
-  workflow_dispatch:
 
 jobs:
   tests:
