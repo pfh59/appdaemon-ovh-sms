@@ -2,22 +2,16 @@ name: Validate
 
 on:
   push:
+    paths-ignore: ['**.md', '.vscode/**']
+    branches:
+      - main
   pull_request:
+    types: [opened, synchronize, reopened]
+    paths-ignore: ['**.md', '.vscode/**']
   schedule:
     - cron: "0 4 * * 1"  # contrôle hebdomadaire (lundi 04:00 UTC)
-  workflow_dispatch:
 
 jobs:
-  hacs:
-    name: HACS validation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: HACS Action
-        uses: hacs/action@main
-        with:
-          category: appdaemon
-
   tests:
     name: Python tests
     runs-on: ubuntu-latest
@@ -35,3 +29,15 @@ jobs:
         run: python -m compileall -q apps
       - name: Unit tests
         run: pytest
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    # Only validate the HACS packaging once the tests have passed.
+    needs: tests
+    steps:
+      - uses: actions/checkout@v7
+      - name: HACS Action
+        uses: hacs/action@main
+        with:
+          category: appdaemon
