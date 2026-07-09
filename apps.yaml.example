@@ -1,0 +1,28 @@
+# Example AppDaemon configuration for the OVH SMS app.
+# Copy this block into your apps/apps.yaml file, then adapt it.
+# The OVH keys must NEVER be written in clear text here: use !secret
+# (values are then read from appdaemon/secrets.yaml).
+
+ovh_sms:
+  module: ovh_sms
+  class: OvhSms
+
+  # --- OVH credentials (required) — see secrets.yaml.example ---
+  application_key: !secret ovh_application_key
+  application_secret: !secret ovh_application_secret
+  consumer_key: !secret ovh_consumer_key
+
+  # --- Options (all optional) ---
+  endpoint: ovh-eu                 # ovh-eu | ovh-ca | ovh-us
+  # service_name: sms-ab12345-1    # leave empty for auto-detection
+  # sender: MyHome                 # sender registered with OVH
+  no_stop_clause: true             # true for alerts (no STOP mention)
+
+  # Default recipients used when the event provides none.
+  default_receivers:
+    - "+33612345678"
+
+  # Event names (defaults shown):
+  # event_name: ovh_sms_send       # event listened to
+  # result_event: ovh_sms_result   # emitted on success
+  # error_event: ovh_sms_error     # emitted on failure

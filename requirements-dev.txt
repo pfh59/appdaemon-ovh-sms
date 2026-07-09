@@ -1,0 +1,2 @@
+# Development / CI dependencies (the app itself only needs `ovh` at runtime).
+pytest>=8.0
