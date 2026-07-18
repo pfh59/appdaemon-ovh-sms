@@ -81,7 +81,9 @@ class OvhSms(hass.Hass):
         except ovh.exceptions.APIError as err:
             self.log(
                 "Unable to list SMS services (%s). "
-                "Check the consumer key has GET /sms rights.",
+                "The consumer key needs the GET /sms right — beware, GET /sms/* "
+                "does NOT cover it. Recreate the token with GET /sms, or set "
+                "'service_name' in apps.yaml to skip auto-detection.",
                 self._describe(err),
                 level="ERROR",
             )
@@ -164,9 +166,18 @@ class OvhSms(hass.Hass):
                 level="WARNING",
             )
 
+        # OVH accepted the request but rejected every recipient: nobody was reached.
+        if not valid:
+            self._fail(
+                "all_receivers_invalid",
+                f"No SMS sent: all recipients were rejected by OVH ({invalid}). "
+                "Use the international format +33...",
+            )
+            return
+
         # No credit consumed while there were valid recipients: typically an
         # exhausted SMS balance.
-        if credits_removed == 0 and valid:
+        if credits_removed == 0:
             self._fail(
                 "insufficient_credits",
                 "Send rejected: not enough SMS credits on the OVH account.",

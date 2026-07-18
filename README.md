@@ -1,7 +1,7 @@
 # AppDaemon OVH SMS
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![Validate](https://github.com/pfhuillet/appdaemon-ovh-sms/actions/workflows/validate.yml/badge.svg)](https://github.com/pfhuillet/appdaemon-ovh-sms/actions/workflows/validate.yml)
+[![Validate](https://github.com/pfh59/appdaemon-ovh-sms/actions/workflows/validate.yml/badge.svg)](https://github.com/pfh59/appdaemon-ovh-sms/actions/workflows/validate.yml)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 Send an **SMS through the OVH API** from **any Home Assistant automation** by firing a
@@ -56,8 +56,12 @@ unnoticed (water leak, intrusion, fire, power outage…).
 
    | Method | Path      |
    |--------|-----------|
+   | GET    | `/sms`    |
    | GET    | `/sms/*`  |
    | POST   | `/sms/*`  |
+
+   > ⚠️ `GET /sms` (without `/*`) is required for the service auto-detection:
+   > in the OVH API, `/sms/*` covers the sub-paths but **not** `/sms` itself.
 
 3. Leave the validity as *Unlimited* (or a long duration).
 4. Confirm: OVH shows you **three values** — write them down, they won't be shown again:
@@ -72,10 +76,14 @@ unnoticed (water leak, intrusion, fire, power outage…).
 
 ## Step 2 — Install via HACS
 
+> ⚠️ **HACS ≥ 2.0**: AppDaemon apps are disabled by default. Enable them first in
+> HACS → ⋮ menu → **Settings** → check **AppDaemon apps discovery & tracking**,
+> otherwise the repository won't show up.
+
 As long as the repository is not in the official catalog, add it as a **custom repository**:
 
 1. HACS → ⋮ menu (top right) → **Custom repositories**.
-2. URL: `https://github.com/pfhuillet/appdaemon-ovh-sms`
+2. URL: `https://github.com/pfh59/appdaemon-ovh-sms`
 3. Category: **AppDaemon**.
 4. **Add**, then open the card and click **Download**.
 
@@ -100,7 +108,60 @@ dependencies, so you add it once.
 
   Then **restart** the add-on.
 
-- **Standalone AppDaemon install** (venv/Docker):
+- **Docker (official `acockburn/appdaemon` image)**:
+  the container installs the packages listed in `requirements.txt` at the root of
+  the mounted conf directory on every start. Create (or edit) that file next to
+  your `appdaemon.yaml`:
+
+  ```
+  config/appdaemon/requirements.txt
+  ```
+
+  with the single line:
+
+  ```
+  ovh
+  ```
+
+  then restart the container: `docker compose restart appdaemon`.
+
+  <details>
+  <summary>Docker Compose example (Home Assistant + AppDaemon)</summary>
+
+  ```yaml
+  services:
+    homeassistant:
+      container_name: homeassistant
+      image: ghcr.io/home-assistant/home-assistant:stable
+      network_mode: host
+      volumes:
+        - ./config:/config
+      environment:
+        - TZ=Europe/Paris
+      restart: unless-stopped
+
+    appdaemon:
+      container_name: appdaemon
+      image: acockburn/appdaemon:latest
+      network_mode: host          # same network as HA, HA_URL can use 127.0.0.1
+      volumes:
+        - ./config/appdaemon:/conf
+      environment:
+        - TZ=Europe/Paris
+        - HA_URL=http://127.0.0.1:8123
+        - TOKEN=${APPDAEMON_HA_TOKEN}   # HA long-lived access token
+      restart: unless-stopped
+      depends_on:
+        - homeassistant
+  ```
+
+  With this layout, HACS (running in the HA container) downloads AppDaemon apps
+  into `/config/appdaemon/apps/`, which the AppDaemon container sees as
+  `/conf/apps/` — no manual copy needed. The `ovh` dependency goes into
+  `./config/appdaemon/requirements.txt` as described above.
+  </details>
+
+- **Standalone AppDaemon install** (venv):
 
   ```bash
   pip install ovh
@@ -266,7 +327,8 @@ automation:
 | Symptom (AppDaemon log) | Likely cause | Fix |
 |-------------------------|--------------|-----|
 | `Incomplete configuration: missing keys …` | Key absent from `apps.yaml` | Check the 3 keys and the `!secret` references |
-| `Invalid OVH keys or unvalidated consumer key` | Wrong key / missing rights | Recreate the token with `GET` + `POST` on `/sms/*` |
+| `Unable to list SMS services (This call has not been granted…)` | Token created without `GET /sms` (`/sms/*` doesn't cover it) | Recreate the token with the 3 rights of [Step 1](#step-1--create-your-ovh-keys), or set `service_name` |
+| `Invalid OVH keys or unvalidated consumer key` | Wrong key / missing rights | Recreate the token with the 3 rights of [Step 1](#step-1--create-your-ovh-keys) |
 | `OVH API rejected the request` | Clock skew or wrong secret | Check the server time and the `application_secret` |
 | `not enough SMS credits` | Exhausted SMS balance | Top up your OVH SMS credit |
 | `Invalid number(s) ignored` | Wrong format | Use the international format `+33…` |

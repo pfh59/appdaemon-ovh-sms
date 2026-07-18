@@ -206,6 +206,23 @@ def test_send_invalid_receivers_logs_warning(make_app, base_args):
     assert last_event(app)[0] == "ovh_sms_result"
 
 
+def test_send_all_receivers_invalid_reports_error(make_app, base_args):
+    client = FakeClient(
+        post_result={
+            "validReceivers": [],
+            "invalidReceivers": ["+33000", "0612"],
+            "totalCreditsRemoved": 0,
+        }
+    )
+    app = make_app(base_args, client)
+
+    send(app, message="hi", receivers=["+33000", "0612"])
+
+    event, data = last_event(app)
+    assert event == "ovh_sms_error"
+    assert data["reason"] == "all_receivers_invalid"
+
+
 def test_send_zero_credits_with_valid_receivers_reports_insufficient(make_app, base_args):
     client = FakeClient(
         post_result={"validReceivers": ["+33612345678"], "totalCreditsRemoved": 0}
